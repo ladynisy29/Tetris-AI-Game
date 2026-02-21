@@ -1,0 +1,42 @@
+{
+    "name": "root",
+    "metadata": {
+        "timer_format_version": "0.1.0",
+        "start_time_seconds": "1771666449",
+        "python_version": "3.10.12 | packaged by Anaconda, Inc. | (main, Jul  5 2023, 19:01:18) [MSC v.1916 64 bit (AMD64)]",
+        "command_line_arguments": "C:\\Users\\empre\\miniconda3\\envs\\mlagents_4_0\\Scripts\\mlagents-learn tetris_config.yaml --run-id=tetris1",
+        "mlagents_version": "1.1.0",
+        "mlagents_envs_version": "1.1.0",
+        "communication_protocol_version": "1.5.0",
+        "pytorch_version": "2.10.0+cpu",
+        "numpy_version": "1.23.5",
+        "end_time_seconds": "1771666491"
+    },
+    "total": 41.81474050000543,
+    "count": 1,
+    "self": 0.14332109998213127,
+    "children": {
+        "run_training.setup": {
+            "total": 0.6397337000234984,
+            "count": 1,
+            "self": 0.6397337000234984
+        },
+        "TrainerController.start_learning": {
+            "total": 41.0316856999998,
+            "count": 1,
+            "self": 0.00041729991789907217,
+            "children": {
+                "TrainerController._reset_env": {
+                    "total": 41.031202400045004,
+                    "count": 1,
+                    "self": 41.031202400045004
+                },
+                "TrainerController._save_models": {
+                    "total": 6.600003689527512e-05,
+                    "count": 1,
+                    "self": 6.600003689527512e-05
+                }
+            }
+        }
+    }
+}
