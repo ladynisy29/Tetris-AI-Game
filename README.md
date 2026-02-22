@@ -146,7 +146,7 @@ tetris_config.yaml
 
 ## Author
 
-Nisy
+Nisy, 
 Master’s Student in Artificial Intelligence
 Junia ISEN, Lille
 
