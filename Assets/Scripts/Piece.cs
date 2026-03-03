@@ -1,3 +1,215 @@
+/*
+using UnityEngine;
+
+public class Piece : MonoBehaviour
+{
+    public Board board { get; private set; }
+    public TetrominoData data { get; private set; }
+    public Vector3Int[] cells { get; private set; }
+    public Vector3Int position { get; private set; }
+    public int rotationIndex { get; private set; }
+
+    public float stepDelay = 0.05f;      // training speed, also overridden by Spawner in human mode
+    public float humanStepDelay = 1.0f;  // human speed fallback
+    public float moveDelay = 0.1f;
+    public float lockDelay = 0.5f;
+
+    private float stepTime;
+    private float moveTime;
+    private float lockTime;
+
+    public void Initialize(Board board, Vector3Int position, TetrominoData data)
+    {
+        this.data = data;
+        this.board = board;
+        this.position = position;
+
+        rotationIndex = 0;
+        stepTime = Time.time + stepDelay; // stepDelay already overridden by Spawner if humanMode
+        moveTime = Time.time + moveDelay;
+        lockTime = 0f;
+
+        if (cells == null) {
+            cells = new Vector3Int[data.cells.Length];
+        }
+
+        for (int i = 0; i < cells.Length; i++) {
+            cells[i] = (Vector3Int)data.cells[i];
+        }
+    }
+
+    private float GetStepDelay()
+    {
+        return (board != null && board.trainingMode) ? stepDelay : humanStepDelay;
+    }
+
+    private void Update()
+    {
+        if (board != null && board.trainingMode)
+            return;
+
+        board.Clear(this);
+
+        lockTime += Time.deltaTime;
+
+        if (Time.time > stepTime)
+        {
+            Step();
+        }
+
+        board.Set(this);
+    }
+
+    private void HandleMoveInputs()
+    {
+        if (Input.GetKey(KeyCode.S))
+        {
+            if (Move(Vector2Int.down)) {
+                stepTime = Time.time + GetStepDelay();
+            }
+        }
+
+        if (Input.GetKey(KeyCode.A)) {
+            Move(Vector2Int.left);
+        } else if (Input.GetKey(KeyCode.D)) {
+            Move(Vector2Int.right);
+        }
+    }
+
+    private void Step()
+    {
+        stepTime = Time.time + GetStepDelay();
+
+        Move(Vector2Int.down);
+
+        if (lockTime >= lockDelay) {
+            Lock();
+        }
+    }
+
+    public bool StepDownOrLock()
+    {
+        if (!Move(Vector2Int.down))
+        {
+            Lock();
+            return true;
+        }
+        return false;
+    }
+
+    public bool HardDrop()
+    {
+        while (Move(Vector2Int.down)) { }
+        Lock();
+        return true;
+    }
+
+    private void Lock()
+    {
+        board.Set(this);
+        board.linesClearedThisStep = 0;
+        board.ClearLines();
+        board.SpawnPiece();
+    }
+
+    public bool Move(Vector2Int translation)
+    {
+        Vector3Int newPosition = position;
+        newPosition.x += translation.x;
+        newPosition.y += translation.y;
+
+        bool valid = board.IsValidPosition(this, newPosition);
+
+        if (valid)
+        {
+            position = newPosition;
+            moveTime = Time.time + moveDelay;
+            lockTime = 0f;
+        }
+
+        return valid;
+    }
+
+    public void Rotate(int direction)
+    {
+        int originalRotation = rotationIndex;
+
+        rotationIndex = Wrap(rotationIndex + direction, 0, 4);
+        ApplyRotationMatrix(direction);
+
+        if (!TestWallKicks(rotationIndex, direction))
+        {
+            rotationIndex = originalRotation;
+            ApplyRotationMatrix(-direction);
+        }
+    }
+
+    private void ApplyRotationMatrix(int direction)
+    {
+        float[] matrix = Data.RotationMatrix;
+
+        for (int i = 0; i < cells.Length; i++)
+        {
+            Vector3 cell = cells[i];
+            int x, y;
+
+            switch (data.tetromino)
+            {
+                case Tetromino.I:
+                case Tetromino.O:
+                    cell.x -= 0.5f;
+                    cell.y -= 0.5f;
+                    x = Mathf.CeilToInt((cell.x * matrix[0] * direction) + (cell.y * matrix[1] * direction));
+                    y = Mathf.CeilToInt((cell.x * matrix[2] * direction) + (cell.y * matrix[3] * direction));
+                    break;
+
+                default:
+                    x = Mathf.RoundToInt((cell.x * matrix[0] * direction) + (cell.y * matrix[1] * direction));
+                    y = Mathf.RoundToInt((cell.x * matrix[2] * direction) + (cell.y * matrix[3] * direction));
+                    break;
+            }
+
+            cells[i] = new Vector3Int(x, y, 0);
+        }
+    }
+
+    private bool TestWallKicks(int rotationIndex, int rotationDirection)
+    {
+        int wallKickIndex = GetWallKickIndex(rotationIndex, rotationDirection);
+
+        for (int i = 0; i < data.wallKicks.GetLength(1); i++)
+        {
+            Vector2Int translation = data.wallKicks[wallKickIndex, i];
+            if (Move(translation)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private int GetWallKickIndex(int rotationIndex, int rotationDirection)
+    {
+        int wallKickIndex = rotationIndex * 2;
+
+        if (rotationDirection < 0) {
+            wallKickIndex--;
+        }
+
+        return Wrap(wallKickIndex, 0, data.wallKicks.GetLength(0));
+    }
+
+    private int Wrap(int input, int min, int max)
+    {
+        if (input < min) {
+            return max - (min - input) % (max - min);
+        } else {
+            return min + (input - min) % (max - min);
+        }
+    }
+}
+
+*/
 using UnityEngine;
 
 public class Piece : MonoBehaviour
@@ -38,6 +250,9 @@ public class Piece : MonoBehaviour
 
     private void Update()
     {
+        if (board != null && board.trainingMode)
+            return;
+
         board.Clear(this);
 
         lockTime += Time.deltaTime;
@@ -112,18 +327,28 @@ public class Piece : MonoBehaviour
         }
     }
 
-    public void HardDrop()
+    public bool StepDownOrLock()
     {
-        while (Move(Vector2Int.down)) {
-            continue;
+        // returns true if it LOCKED this call, false otherwise
+        if (!Move(Vector2Int.down))
+        {
+            Lock();
+            return true;   // locked
         }
+        return false;      // moved down
+    }
+    public bool HardDrop()
+    {
+        while (Move(Vector2Int.down)) { }
 
         Lock();
+        return true; // ✅ hard drop always locks
     }
 
     private void Lock()
     {
         board.Set(this);
+        board.linesClearedThisStep = 0;   // reset for this lock result
         board.ClearLines();
         board.SpawnPiece();
     }

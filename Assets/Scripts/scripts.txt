@@ -1,0 +1,56 @@
+#for letting Unity play in the background
+Edit → Project Settings → Player → Resolution and Presentation → Run In Background = true
+
+#fixing the onnx thing
+C:\Users\marcn\.conda\envs\mlagents31012\Lib\site-packages\mlagents\trainers\torch_entities\model_serialization
+
+
+##make sure powershell is accessing the project folder
+
+#for activating the environment:
+conda activate mlagents31012
+
+#for training:
+mlagents-learn .\tetris_ppo.yaml --run-id=tetris11 --num-envs 1 --time-scale 20 --force
+
+mlagents-learn .\tetris_ppo.yaml --run-id=tetris_9env --time-scale 20 --force
+
+conda activate mlagents31012
+mlagents-learn .\tetris_ppo.yaml --run-id=tetris_13env --initialize-from=tetris_11env --force
+           
+
+To stop and resume:
+mlagents-learn .\tetris_ppo.yaml --run-id=tetris_10env --time-scale 20 --force
+then Ctrl+C to stop 
+mlagents-learn .\tetris_ppo.yaml --run-id=tetris_10env --resume
+
+#for tensorboard:
+tensorboard --logdir results/tetris_10env --port 6006
+
+
+tensorboard --logdir results/
+
+
+
+#Switching between training and testing
+Super simple now:
+
+Training
+Select Board GameObject in Hierarchy
+
+In Inspector → tick trainingMode ✅
+
+Run mlagents-learn command in terminal
+
+Press Play
+
+Testing
+Select Board GameObject in Hierarchy
+
+In Inspector → untick trainingMode ☐
+
+Select your Agent GameObject → Behavior Parameters → drag .onnx into Model field → set Behavior Type to Inference Only
+
+Press Play — clean board, agent runs the model
+
+That's the full switch. One checkbox + one model swap.

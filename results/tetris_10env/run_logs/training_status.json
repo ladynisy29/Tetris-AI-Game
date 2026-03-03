@@ -1,0 +1,65 @@
+{
+    "Tetris": {
+        "checkpoints": [
+            {
+                "steps": 9699889,
+                "file_path": "results\\tetris_10env\\Tetris\\Tetris-9699889.onnx",
+                "reward": 6.946308605372906,
+                "creation_time": 1772441151.0142138,
+                "auxillary_file_paths": [
+                    "results\\tetris_10env\\Tetris\\Tetris-9699889.pt"
+                ]
+            },
+            {
+                "steps": 9799915,
+                "file_path": "results\\tetris_10env\\Tetris\\Tetris-9799915.onnx",
+                "reward": 19.16578912015619,
+                "creation_time": 1772441224.9723318,
+                "auxillary_file_paths": [
+                    "results\\tetris_10env\\Tetris\\Tetris-9799915.pt"
+                ]
+            },
+            {
+                "steps": 9899990,
+                "file_path": "results\\tetris_10env\\Tetris\\Tetris-9899990.onnx",
+                "reward": 15.337602095747435,
+                "creation_time": 1772441299.1346138,
+                "auxillary_file_paths": [
+                    "results\\tetris_10env\\Tetris\\Tetris-9899990.pt"
+                ]
+            },
+            {
+                "steps": 9999871,
+                "file_path": "results\\tetris_10env\\Tetris\\Tetris-9999871.onnx",
+                "reward": 19.593120384547447,
+                "creation_time": 1772441386.4507833,
+                "auxillary_file_paths": [
+                    "results\\tetris_10env\\Tetris\\Tetris-9999871.pt"
+                ]
+            },
+            {
+                "steps": 10000373,
+                "file_path": "results\\tetris_10env\\Tetris\\Tetris-10000373.onnx",
+                "reward": 18.90316654663337,
+                "creation_time": 1772441386.5627997,
+                "auxillary_file_paths": [
+                    "results\\tetris_10env\\Tetris\\Tetris-10000373.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 10000373,
+            "file_path": "results\\tetris_10env\\Tetris.onnx",
+            "reward": 18.90316654663337,
+            "creation_time": 1772441386.5627997,
+            "auxillary_file_paths": [
+                "results\\tetris_10env\\Tetris\\Tetris-10000373.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    }
+}

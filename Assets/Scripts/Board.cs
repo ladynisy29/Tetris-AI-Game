@@ -11,10 +11,15 @@ public class Board : MonoBehaviour
     public Vector2Int boardSize = new Vector2Int(10, 20);
     public Vector3Int spawnPosition = new Vector3Int(-1, 8, 0);
 
+    // --- Added: Next piece preview (1-piece lookahead) ---
+    public TetrominoData NextData { get; private set; }
+
     public bool IsGameOverFlag { get; private set; }
 
     public int linesClearedThisStep = 0;
+    public int curriculumPreFillRows = 0;
 
+    public bool trainingMode = true;
 
     public RectInt Bounds
     {
@@ -30,24 +35,33 @@ public class Board : MonoBehaviour
         tilemap = GetComponentInChildren<Tilemap>();
         activePiece = GetComponentInChildren<Piece>();
 
-        for (int i = 0; i < tetrominoes.Length; i++) {
+        for (int i = 0; i < tetrominoes.Length; i++)
+        {
             tetrominoes[i].Initialize();
         }
     }
 
     private void Start()
     {
+        // Initialize the first "next" piece so the first spawn uses it
+        NextData = GetRandomTetromino();
         SpawnPiece();
+    }
+
+    // --- Added: random tetromino sampling helper ---
+    private TetrominoData GetRandomTetromino()
+    {
+        int random = Random.Range(0, tetrominoes.Length);
+        return tetrominoes[random];
     }
 
     public void SpawnPiece()
     {
-        // ✅ Reset per-piece episode state
-        linesClearedThisStep = 0;
-        IsGameOverFlag = false;
+        // Use the previewed next piece
+        TetrominoData data = NextData;
 
-        int random = Random.Range(0, tetrominoes.Length);
-        TetrominoData data = tetrominoes[random];
+        // Roll the next preview for the following spawn
+        NextData = GetRandomTetromino();
 
         activePiece.Initialize(this, spawnPosition, data);
 
@@ -61,20 +75,11 @@ public class Board : MonoBehaviour
         }
     }
 
-
-    //public void GameOver()
-    //{
-    //    tilemap.ClearAllTiles();
-
-    //    // Do anything else you want on game over here..
-    //}
-
     public void GameOver()
     {
         tilemap.ClearAllTiles();
         IsGameOverFlag = true;
     }
-
 
     public void Set(Piece piece)
     {
@@ -98,18 +103,17 @@ public class Board : MonoBehaviour
     {
         RectInt bounds = Bounds;
 
-        // The position is only valid if every cell is valid
         for (int i = 0; i < piece.cells.Length; i++)
         {
             Vector3Int tilePosition = piece.cells[i] + position;
 
-            // An out of bounds tile is invalid
-            if (!bounds.Contains((Vector2Int)tilePosition)) {
+            if (!bounds.Contains((Vector2Int)tilePosition))
+            {
                 return false;
             }
 
-            // A tile already occupies the position, thus invalid
-            if (tilemap.HasTile(tilePosition)) {
+            if (tilemap.HasTile(tilePosition))
+            {
                 return false;
             }
         }
@@ -122,14 +126,14 @@ public class Board : MonoBehaviour
         RectInt bounds = Bounds;
         int row = bounds.yMin;
 
-        // Clear from bottom to top
         while (row < bounds.yMax)
         {
-            // Only advance to the next row if the current is not cleared
-            // because the tiles above will fall down when a row is cleared
-            if (IsLineFull(row)) {
+            if (IsLineFull(row))
+            {
                 LineClear(row);
-            } else {
+            }
+            else
+            {
                 row++;
             }
         }
@@ -142,9 +146,8 @@ public class Board : MonoBehaviour
         for (int col = bounds.xMin; col < bounds.xMax; col++)
         {
             Vector3Int position = new Vector3Int(col, row, 0);
-
-            // The line is not full if a tile is missing
-            if (!tilemap.HasTile(position)) {
+            if (!tilemap.HasTile(position))
+            {
                 return false;
             }
         }
@@ -154,19 +157,16 @@ public class Board : MonoBehaviour
 
     public void LineClear(int row)
     {
-        // ✅ ADD THIS LINE
         linesClearedThisStep++;
 
         RectInt bounds = Bounds;
 
-        // Clear all tiles in the row
         for (int col = bounds.xMin; col < bounds.xMax; col++)
         {
             Vector3Int position = new Vector3Int(col, row, 0);
             tilemap.SetTile(position, null);
         }
 
-        // Shift every row above down one
         while (row < bounds.yMax)
         {
             for (int col = bounds.xMin; col < bounds.xMax; col++)
@@ -187,8 +187,28 @@ public class Board : MonoBehaviour
         tilemap.ClearAllTiles();
         linesClearedThisStep = 0;
         IsGameOverFlag = false;
+
+        // Curriculum: pre-fill bottom rows with one gap each to force line clears
+        if (trainingMode && curriculumPreFillRows > 0)
+        {
+            System.Random rng = new System.Random();
+            for (int row = 0; row < curriculumPreFillRows; row++)
+            {
+                int gapCol = rng.Next(0, Bounds.width);
+                for (int x = Bounds.xMin; x < Bounds.xMax; x++)
+                {
+                    if ((x - Bounds.xMin) != gapCol)
+                    {
+                        Vector3Int pos = new Vector3Int(x, Bounds.yMin + row, 0);
+                        tilemap.SetTile(pos, tetrominoes[0].tile);
+                    }
+                }
+            }
+        }
+
+        // Reset next piece at the start of each episode
+        NextData = GetRandomTetromino();
+
         SpawnPiece();
     }
-
-
 }

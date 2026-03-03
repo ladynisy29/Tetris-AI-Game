@@ -1,0 +1,373 @@
+using UnityEngine;
+using Unity.MLAgents;
+using Unity.MLAgents.Sensors;
+using Unity.MLAgents.Actuators;
+
+public class TetrisAgent : Agent
+{
+    public Board board;
+
+    // -------------------------------------------------------
+    // Reward weights
+    // -------------------------------------------------------
+
+    // LINE CLEARS — dominant positive signal
+    private const float W_LINE_1 =  3.0f;
+    private const float W_LINE_2 =  9.0f;
+    private const float W_LINE_3 = 18.0f;
+    private const float W_LINE_4 = 36.0f;
+
+    // HOLES — dominant negative signal
+    private const float W_HOLES_DELTA = -0.5f;   // per new hole created this lock (normalized)
+    private const float W_HOLES_TOTAL = -0.05f;  // absolute hole count each lock (normalized)
+
+    // BOARD QUALITY (normalized deltas)
+    private const float W_BUMPINESS  = -0.1f;
+    private const float W_AGG_HEIGHT = -0.05f;
+    private const float W_LOW_PLACE  =  0.02f;
+
+    // SURVIVAL
+    private const float W_SURVIVAL_HIGH = 0.12f;
+    private const float W_SURVIVAL_LOW  = 0.03f;
+
+    // PER-STEP
+    private const float W_STEP    = 0f;
+    private const float W_INVALID = -0.002f;
+
+    // -------------------------------------------------------
+    private int   piecesPlaced  = 0;
+    private float prevHoles     = 0f;
+    private float prevBumpiness = 0f;
+    private float prevAggHeight = 0f;
+
+    public bool debugLogs = false;
+    private int episodeLines = 0;
+
+    // -------------------------------------------------------
+    public override void OnEpisodeBegin()
+    {
+        if (board == null) return;
+        board.trainingMode = true;
+        board.ResetBoard();
+
+        episodeLines = 0;
+        prevHoles     = 0f;
+        prevBumpiness = 0f;
+        prevAggHeight = 0f;
+        piecesPlaced  = 0;
+    }
+
+    // -------------------------------------------------------
+    // Observations: 200 + 3 + 10 + 12 = 225
+    // Inspector → Behavior Parameters → Space Size = 225
+    // -------------------------------------------------------
+    public override void CollectObservations(VectorSensor sensor)
+    {
+        if (board == null) return;
+
+        RectInt bounds = board.Bounds;
+        int width  = bounds.width;
+        int height = bounds.height;
+
+        // 1) Raw grid: 200 obs
+        for (int y = bounds.yMin; y < bounds.yMax; y++)
+            for (int x = bounds.xMin; x < bounds.xMax; x++)
+                sensor.AddObservation(board.tilemap.HasTile(new Vector3Int(x, y, 0)) ? 1f : 0f);
+
+        // 2) Aggregate board features: 3 obs
+        int[] colH = GetColumnHeights(bounds);
+        sensor.AddObservation((float)GetAggregateHeight(colH) / (width * height));
+        sensor.AddObservation((float)GetHoles(bounds, colH)   / (width * height));
+        sensor.AddObservation((float)GetBumpiness(colH)       / (width * height));
+
+        // 3) Per-column heights: 10 obs
+        for (int i = 0; i < colH.Length; i++)
+            sensor.AddObservation((float)colH[i] / height);
+
+        // 4) Active piece context: 12 obs
+        //    anchor pos (2) + rotation (1) + type (1) + actual cell offsets (8)
+        if (board.activePiece != null)
+        {
+            // Anchor position
+            sensor.AddObservation((float)(board.activePiece.position.y - bounds.yMin) / height);
+            sensor.AddObservation((float)(board.activePiece.position.x - bounds.xMin) / width);
+
+            // Rotation index
+            sensor.AddObservation(board.activePiece.rotationIndex / 3f);
+
+            // Piece type
+            sensor.AddObservation((int)board.activePiece.data.tetromino / 6f);
+
+            // Actual cell offsets for current rotation (rotated cells)
+            var cells     = board.activePiece.cells;
+            int cellCount = Mathf.Min(cells.Length, 4);
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (i < cellCount)
+                {
+                    sensor.AddObservation(cells[i].x / 2f); // offsets range –2 to +2
+                    sensor.AddObservation(cells[i].y / 2f);
+                }
+                else
+                {
+                    sensor.AddObservation(0f);
+                    sensor.AddObservation(0f);
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < 12; i++)
+                sensor.AddObservation(0f);
+        }
+    }
+
+    // -------------------------------------------------------
+    public override void OnActionReceived(ActionBuffers actions)
+    {
+        if (board == null || board.activePiece == null) return;
+
+        // If we're already game-over, end episode immediately.
+        if (board.IsGameOverFlag)
+        {
+            if (debugLogs) Debug.Log($"GAME OVER early check: piecesPlaced={piecesPlaced}");
+            AddScaledTerminalPenalty();
+            EndEpisode();
+            return; // ✅ IMPORTANT
+        }
+
+        int action    = actions.DiscreteActions[0];
+        Piece current = board.activePiece;
+
+        // Remove the active piece from the tilemap so moves are clean
+        board.Clear(current);
+
+        Vector3Int prePos = current.position;
+        int preRot        = current.rotationIndex;
+
+        bool lockedThisStep = false;
+
+        switch (action)
+        {
+            case 0: break;
+            case 1: current.Move(Vector2Int.left);  break;
+            case 2: current.Move(Vector2Int.right); break;
+            case 3: current.Rotate(1);              break;
+            case 4: lockedThisStep = current.HardDrop(); break; // returns bool
+        }
+
+        bool actionWasEffective = (current.position != prePos) || (current.rotationIndex != preRot);
+
+        // Apply gravity step if we didn't hard drop and game isn't over
+        if (action != 4 && !board.IsGameOverFlag)
+        {
+            lockedThisStep = current.StepDownOrLock(); // returns true if it locked
+        }
+
+        // Re-draw whatever the current active piece is
+        if (board.activePiece != null && !board.IsGameOverFlag)
+        {
+            board.Set(board.activePiece);
+        }
+
+        // --- 1) Step cost ---
+        AddReward(W_STEP);
+
+        // --- 2) Invalid move penalty ---
+        if ((action == 1 || action == 2 || action == 3) && !actionWasEffective)
+            AddReward(W_INVALID);
+
+        // --- 3) Line clear reward ---
+        if (board.linesClearedThisStep > 0)
+        {
+            episodeLines += board.linesClearedThisStep;
+            int n = board.linesClearedThisStep;
+            float r = n == 1 ? W_LINE_1
+                    : n == 2 ? W_LINE_2
+                    : n == 3 ? W_LINE_3
+                    :          W_LINE_4;
+            AddReward(r);
+            board.linesClearedThisStep = 0;
+        }
+
+        // --- 4) Placement signals ---
+        if (lockedThisStep)
+        {
+            if (debugLogs) Debug.Log($"LOCK! piecesPlaced -> {piecesPlaced + 1}");
+            piecesPlaced++;
+
+            RectInt b = board.Bounds;
+
+            // Compute board metrics deterministically WITHOUT mutating tilemap,
+            // while ignoring the currently falling active piece (if it is drawn).
+            int[] heights = GetColumnHeightsIgnoringActive(b);
+            float curAggH  = GetAggregateHeight(heights);
+            float curHoles = GetHolesIgnoringActive(b, heights);
+            float curBump  = GetBumpiness(heights);
+
+            // New holes (normalized)
+            int newHoles = Mathf.Max(0, (int)curHoles - (int)prevHoles);
+            float normNewHoles = newHoles / (float)(b.width * b.height);
+            if (newHoles > 0)
+                AddReward(W_HOLES_DELTA * normNewHoles);
+
+            // Total holes (normalized)
+            float normHoles = curHoles / (float)(b.width * b.height);
+            AddReward(W_HOLES_TOTAL * normHoles);
+
+            // Board quality deltas (normalized)
+            float norm = (float)(b.width * b.height);
+            AddReward(W_AGG_HEIGHT * ((curAggH - prevAggHeight) / norm));
+            AddReward(W_BUMPINESS  * ((curBump  - prevBumpiness) / norm));
+
+            // Low-stack bonus
+            float maxH = GetMaxHeight(heights);
+            AddReward(W_LOW_PLACE * (1.0f - maxH / b.height));
+
+            // Survival reward (decays as stack grows)
+            float heightFrac    = maxH / (float)b.height;
+            float survivalBonus = Mathf.Lerp(W_SURVIVAL_HIGH, W_SURVIVAL_LOW, heightFrac);
+            AddReward(survivalBonus);
+
+            // Update prev metrics
+            prevHoles     = curHoles;
+            prevAggHeight = curAggH;
+            prevBumpiness = curBump;
+        }
+
+        // --- 5) Terminal penalty ---
+        if (board.IsGameOverFlag)
+        {
+            if (debugLogs) Debug.Log($"EP END: piecesPlaced={piecesPlaced} lines={episodeLines}");
+            AddScaledTerminalPenalty();
+            EndEpisode();
+        }
+    }
+
+    private void AddScaledTerminalPenalty()
+    {
+        float earlyDeathFactor = Mathf.Clamp01(1f - piecesPlaced / 50f);
+        float pen = -1.0f - 4.0f * earlyDeathFactor;
+        if (debugLogs) Debug.Log($"TerminalPenalty={pen} piecesPlaced={piecesPlaced}");
+        AddReward(pen);
+    }
+
+    // -------------------------------------------------------
+    public override void Heuristic(in ActionBuffers actionsOut)
+    {
+        var d = actionsOut.DiscreteActions;
+        d[0] = 0;
+        if (Input.GetKey(KeyCode.LeftArrow))  d[0] = 1;
+        if (Input.GetKey(KeyCode.RightArrow)) d[0] = 2;
+        if (Input.GetKey(KeyCode.UpArrow))    d[0] = 3;
+        if (Input.GetKey(KeyCode.Space))      d[0] = 4;
+    }
+
+    // -------------------------------------------------------
+    // Board analysis helpers (original)
+    // -------------------------------------------------------
+    private int[] GetColumnHeights(RectInt bounds)
+    {
+        int[] heights = new int[bounds.width];
+        for (int col = 0; col < bounds.width; col++)
+        {
+            int x = bounds.xMin + col;
+            for (int y = bounds.yMax - 1; y >= bounds.yMin; y--)
+            {
+                if (board.tilemap.HasTile(new Vector3Int(x, y, 0)))
+                {
+                    heights[col] = y - bounds.yMin + 1;
+                    break;
+                }
+            }
+        }
+        return heights;
+    }
+
+    private int GetAggregateHeight(int[] h)
+    {
+        int t = 0; foreach (int v in h) t += v; return t;
+    }
+
+    private int GetMaxHeight(int[] h)
+    {
+        int m = 0; foreach (int v in h) if (v > m) m = v; return m;
+    }
+
+    private int GetHoles(RectInt bounds, int[] heights)
+    {
+        int holes = 0;
+        for (int col = 0; col < bounds.width; col++)
+        {
+            int x   = bounds.xMin + col;
+            int top = bounds.yMin + heights[col];
+            for (int y = bounds.yMin; y < top; y++)
+                if (!board.tilemap.HasTile(new Vector3Int(x, y, 0)))
+                    holes++;
+        }
+        return holes;
+    }
+
+    private int GetBumpiness(int[] heights)
+    {
+        int b = 0;
+        for (int i = 0; i < heights.Length - 1; i++)
+            b += Mathf.Abs(heights[i] - heights[i + 1]);
+        return b;
+    }
+
+    // -------------------------------------------------------
+    // Deterministic metric computation ignoring active piece
+    // -------------------------------------------------------
+    private bool HasTileIgnoringActive(Vector3Int pos)
+    {
+        if (!board.tilemap.HasTile(pos)) return false;
+
+        // If the active falling piece is drawn into the tilemap,
+        // treat those cells as empty for board-quality metrics.
+        if (board.activePiece != null)
+        {
+            Vector3Int p = board.activePiece.position;
+            var cells = board.activePiece.cells;
+            for (int i = 0; i < cells.Length; i++)
+            {
+                Vector3Int c = p + cells[i];
+                if (c.x == pos.x && c.y == pos.y) return false;
+            }
+        }
+        return true;
+    }
+
+    private int[] GetColumnHeightsIgnoringActive(RectInt bounds)
+    {
+        int[] heights = new int[bounds.width];
+        for (int col = 0; col < bounds.width; col++)
+        {
+            int x = bounds.xMin + col;
+            for (int y = bounds.yMax - 1; y >= bounds.yMin; y--)
+            {
+                if (HasTileIgnoringActive(new Vector3Int(x, y, 0)))
+                {
+                    heights[col] = y - bounds.yMin + 1;
+                    break;
+                }
+            }
+        }
+        return heights;
+    }
+
+    private int GetHolesIgnoringActive(RectInt bounds, int[] heights)
+    {
+        int holes = 0;
+        for (int col = 0; col < bounds.width; col++)
+        {
+            int x   = bounds.xMin + col;
+            int top = bounds.yMin + heights[col];
+            for (int y = bounds.yMin; y < top; y++)
+                if (!HasTileIgnoringActive(new Vector3Int(x, y, 0)))
+                    holes++;
+        }
+        return holes;
+    }
+}
