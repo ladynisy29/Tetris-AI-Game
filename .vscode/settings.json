@@ -56,5 +56,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "unity-tetris-tutorial-main.sln"
+    "dotnet.defaultSolution": "Tetris-AI-Game-Parallel.sln"
 }

@@ -1,0 +1,131 @@
+behaviors:
+  Tetris:
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 1024
+      buffer_size: 40960 # try 20480 later (or even 10240)
+      learning_rate: 2.0e-4
+      beta: 0.005 # try 0.01 later
+      beta_schedule: constant
+      epsilon: 0.2
+      epsilon_schedule: linear
+      lambd: 0.95
+      num_epoch: 4
+      learning_rate_schedule: linear
+    network_settings:
+      normalize: true
+      hidden_units: 512
+      num_layers: 3
+    reward_signals:
+      extrinsic:
+        gamma: 0.99
+        strength: 1.0
+        network_settings:
+          normalize: true
+          hidden_units: 256
+          num_layers: 2
+    time_horizon: 256
+    max_steps: 50000000
+    checkpoint_interval: 100000
+    summary_freq: 10000
+    keep_checkpoints: 5
+
+
+# behaviors:
+#   Tetris:
+#     trainer_type: ppo
+#     hyperparameters:
+#       batch_size: 512
+#       buffer_size: 20480
+#       learning_rate: 5.0e-4
+#       beta: 0.02
+#       beta_schedule: linear
+#       epsilon: 0.2
+#       epsilon_schedule: linear
+#       lambd: 0.95
+#       num_epoch: 5
+#       learning_rate_schedule: linear
+#     network_settings:
+#       normalize: true
+#       hidden_units: 512
+#       num_layers: 3
+#     reward_signals:
+#       extrinsic:
+#         gamma: 0.99
+#         strength: 1.0
+#         network_settings:
+#           normalize: true
+#           hidden_units: 256
+#           num_layers: 2
+#     time_horizon: 64
+#     max_steps: 10000000
+#     checkpoint_interval: 50000
+#     summary_freq: 2000
+#     keep_checkpoints: 5
+
+
+# behaviors:
+#   Tetris:
+#     trainer_type: ppo
+#     hyperparameters:
+#       batch_size: 512
+#       buffer_size: 20480
+#       learning_rate: 5.0e-4    # bumped from 3e-4 to escape plateau
+#       beta: 0.01               # slightly more entropy to re-explore
+#       beta_schedule: linear
+#       epsilon: 0.2
+#       epsilon_schedule: linear
+#       lambd: 0.95
+#       num_epoch: 5
+#       learning_rate_schedule: linear
+#     network_settings:
+#       normalize: true
+#       hidden_units: 512
+#       num_layers: 3
+#     reward_signals:
+#       extrinsic:
+#         gamma: 0.99
+#         strength: 1.0
+#         network_settings:
+#           normalize: true
+#           hidden_units: 256
+#           num_layers: 2
+#     time_horizon: 64
+#     max_steps: 5000000
+#     checkpoint_interval: 50000
+#     summary_freq: 2000
+#     keep_checkpoints: 5
+
+
+
+# behaviors:
+#   Tetris:
+#     trainer_type: ppo
+#     hyperparameters:
+#       batch_size: 512
+#       buffer_size: 349152
+#       learning_rate: 3.0e-4
+#       beta: 0.05
+#       beta_schedule: linear
+#       epsilon: 0.25
+#       epsilon_schedule: linear
+#       lambd: 0.95
+#       num_epoch: 3
+#       learning_rate_schedule: linear
+#     network_settings:
+#       normalize: true
+#       hidden_units: 256
+#       num_layers: 3
+#     reward_signals:
+#       extrinsic:
+#         gamma: 0.99
+#         strength: 1.0
+#         network_settings:
+#           normalize: true
+#           hidden_units: 256
+#           num_layers: 2
+#     time_horizon: 256
+#     max_steps: 2000000
+#     checkpoint_interval: 100000
+#     summary_freq: 2000
+#     keep_checkpoints: 5

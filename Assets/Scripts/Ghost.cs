@@ -19,6 +19,9 @@ public class Ghost : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (mainBoard != null && mainBoard.trainingMode)
+            return;
+        
         Clear();
         Copy();
         Drop();

@@ -1,0 +1,65 @@
+{
+    "Tetris": {
+        "checkpoints": [
+            {
+                "steps": 399969,
+                "file_path": "results\\tetris_parallel\\Tetris\\Tetris-399969.onnx",
+                "reward": -4.935385129191164,
+                "creation_time": 1772243113.6949632,
+                "auxillary_file_paths": [
+                    "results\\tetris_parallel\\Tetris\\Tetris-399969.pt"
+                ]
+            },
+            {
+                "steps": 499982,
+                "file_path": "results\\tetris_parallel\\Tetris\\Tetris-499982.onnx",
+                "reward": -4.932265297490723,
+                "creation_time": 1772243230.6292915,
+                "auxillary_file_paths": [
+                    "results\\tetris_parallel\\Tetris\\Tetris-499982.pt"
+                ]
+            },
+            {
+                "steps": 599990,
+                "file_path": "results\\tetris_parallel\\Tetris\\Tetris-599990.onnx",
+                "reward": -4.782131856614416,
+                "creation_time": 1772243343.3307283,
+                "auxillary_file_paths": [
+                    "results\\tetris_parallel\\Tetris\\Tetris-599990.pt"
+                ]
+            },
+            {
+                "steps": 699967,
+                "file_path": "results\\tetris_parallel\\Tetris\\Tetris-699967.onnx",
+                "reward": -4.855294312521171,
+                "creation_time": 1772243444.7529047,
+                "auxillary_file_paths": [
+                    "results\\tetris_parallel\\Tetris\\Tetris-699967.pt"
+                ]
+            },
+            {
+                "steps": 717111,
+                "file_path": "results\\tetris_parallel\\Tetris\\Tetris-717111.onnx",
+                "reward": -4.750044777241838,
+                "creation_time": 1772243465.5669608,
+                "auxillary_file_paths": [
+                    "results\\tetris_parallel\\Tetris\\Tetris-717111.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 717111,
+            "file_path": "results\\tetris_parallel\\Tetris.onnx",
+            "reward": -4.750044777241838,
+            "creation_time": 1772243465.5669608,
+            "auxillary_file_paths": [
+                "results\\tetris_parallel\\Tetris\\Tetris-717111.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.10.0+cpu"
+    }
+}
