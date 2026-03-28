@@ -10,6 +10,10 @@ This project demonstrates deep reinforcement learning applied to a classic game 
 
 ---
 
+https://github.com/user-attachments/assets/55c84804-d505-40d1-8d36-8a6097240b40
+
+
+
 ## Project Overview
 
 The agent interacts with a custom Tetris environment built in Unity and learns to:
